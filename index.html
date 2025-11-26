@@ -1,128 +1,351 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini AI 測試介面</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>香港信用卡消費助手 (修正版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 600px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            background-color: #f5f5f5;
+            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        .card-item {
+            transition: transform 0.2s;
         }
-        h1 { text-align: center; color: #333; }
-        .input-group { margin-bottom: 1rem; }
-        textarea {
-            width: 100%;
-            height: 100px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            resize: vertical;
-            font-size: 16px;
-            box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
+        .card-item:active {
+            transform: scale(0.98);
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #0070f3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
+        .tag {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            margin-right: 0.25rem;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
         }
-        button:hover { background-color: #0051a2; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        
-        #result-area {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #0070f3;
-            display: none; /* 預設隱藏 */
-            white-space: pre-wrap; /* 保留換行 */
-            line-height: 1.6;
+        .tag-bank { background-color: #e5e7eb; color: #374151; }
+        .highlight-rate {
+            color: #dc2626;
+            font-weight: 800;
+            font-size: 1.25rem;
         }
-        .loading { color: #666; text-align: center; display: none; margin-top: 10px;}
+        /* 修正手機上的輸入框樣式 */
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
     </style>
 </head>
-<body>
+<body class="pb-10">
 
-<div class="container">
-    <h1>Gemini AI 助手</h1>
-    <p style="text-align: center; color: #666; font-size: 0.9rem;">後端: Render | 資料庫: Supabase</p>
-    
-    <div class="input-group">
-        <textarea id="userMessage" placeholder="請輸入你想問的問題..."></textarea>
+    <!-- Header -->
+    <div class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <h1 class="text-xl font-bold text-center">💳 刷哪張卡最抵？</h1>
+        <p class="text-center text-blue-100 text-xs mt-1">V2.0 - 穩定版</p>
     </div>
-    
-    <button id="sendBtn" onclick="sendMessage()">發送請求</button>
-    
-    <div id="loading" class="loading">AI 正在思考中 (Render 喚醒可能需 1 分鐘)...</div>
-    <div id="result-area"></div>
-</div>
 
-<script>
-    async function sendMessage() {
-        const input = document.getElementById('userMessage');
-        const resultArea = document.getElementById('result-area');
-        const loading = document.getElementById('loading');
-        const btn = document.getElementById('sendBtn');
+    <!-- Search Form -->
+    <div class="p-4 max-w-md mx-auto bg-white shadow-sm rounded-b-xl mb-4">
+        <div class="grid grid-cols-1 gap-4">
+            
+            <!-- Scenario -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">消費場景 (買甚麼?)</label>
+                <select id="categorySelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50 text-gray-900">
+                    <option value="all">顯示所有 (All)</option>
+                    <option value="dining">🍽️ 餐飲 / 食肆</option>
+                    <option value="online">🛒 網上購物 / 網購</option>
+                    <option value="supermarket">🥦 超市 / 百貨 / 生活</option>
+                    <option value="travel">✈️ 旅遊 / 酒店 / 外幣</option>
+                    <option value="transport">🚌 交通 / 車費</option>
+                    <option value="entertainment">🎬 娛樂 (電影/串流)</option>
+                    <option value="mobile">📱 手機支付 (Apple/Google Pay)</option>
+                </select>
+            </div>
+
+            <!-- Region -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">簽帳地區</label>
+                <select id="regionSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50 text-gray-900">
+                    <option value="local">🇭🇰 本地 (Local)</option>
+                    <option value="overseas">🌏 海外 / 外幣 (Overseas)</option>
+                    <option value="china">🇨🇳 內地 (China)</option>
+                    <option value="japan">🇯🇵 日本 (Japan)</option>
+                </select>
+            </div>
+
+            <button onclick="filterCards()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 shadow-lg active:bg-blue-800">
+                🔍 立即搜尋
+            </button>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="max-w-md mx-auto px-4">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-bold text-gray-800">推薦結果</h2>
+            <div class="flex items-center gap-2">
+                <span id="dataSource" class="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hidden"></span>
+                <span id="resultCount" class="text-sm text-gray-500"></span>
+            </div>
+        </div>
         
-        const message = input.value.trim();
-        if (!message) return alert('請輸入內容');
+        <!-- Error Display Area -->
+        <div id="errorDisplay" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">發生錯誤：</strong>
+            <span class="block sm:inline" id="errorMessage"></span>
+        </div>
 
-        // UI 狀態切換
-        btn.disabled = true;
-        loading.style.display = 'block';
-        resultArea.style.display = 'none';
-        resultArea.innerText = '';
+        <div id="cardList" class="space-y-3">
+            <div class="text-center text-gray-500 py-10">載入中...</div>
+        </div>
+    </div>
 
-        try {
-            // 發送請求到你的 Render Backend
-            // 注意：這裡填入你的實際網址
-            const response = await fetch('https://gemini-backend-3ej4.onrender.com/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: message })
-            });
+    <script>
+        // Global state
+        let isLoading = false;
 
-            const data = await response.json();
+        // 1. Pre-parsed JSON Data (解決 CSV 解析錯誤的問題)
+        // 已經將原本的 CSV 轉換為 JSON 物件陣列
+        // 這些資料作為後備資料，如果 API 無法連接時使用
+        let cardsData = [
+            { "發卡機構": "滙豐銀行", "卡名": "HSBC Red 信用卡", "消費種類": "網上購物", "支付方式": "網上交易", "簽帳地區": "所有地區", "指定商戶": "所有網上簽帳 (繳費除外)", "回饋種類": "「獎賞錢」(RC)", "回饋數值": "4%", "簽帳上限": "每月首$10,000 (其後1%)", "備註": "網購無腦刷首選，超市亦有1%" },
+            { "發卡機構": "AEON", "卡名": "AEON CARD WAKUWAKU", "消費種類": "網上購物", "支付方式": "網上交易", "簽帳地區": "所有地區", "指定商戶": "所有網上簽帳", "回饋種類": "現金回贈", "回饋數值": "6%", "簽帳上限": "每月回贈上限$300 (即簽$5,000)", "備註": "日本簽帳3%回贈，需透過App查閱回贈" },
+            { "發卡機構": "恒生銀行", "卡名": "MMPOWER World Mastercard", "消費種類": "網上/手機支付", "支付方式": "網上 / Apple Pay / Google Pay", "簽帳地區": "所有地區", "指定商戶": "自選類別 (需登記)：手機支付、餐飲、旅遊外幣、電子產品、娛樂", "回饋種類": "+FUN Dollars", "回饋數值": "5%", "簽帳上限": "每月回贈上限$500 +FUN (需每月簽滿$5,000)", "備註": "極熱門，必須每月登記及滿足簽帳門檻" },
+            { "發卡機構": "中銀香港", "卡名": "中銀 Chill Card", "消費種類": "娛樂/生活", "支付方式": "實體/網上", "簽帳地區": "本地/海外", "指定商戶": "影院、卡拉OK、串流平台(Netflix/Disney+)、指定餐飲", "回饋種類": "現金回贈", "回饋數值": "10%", "簽帳上限": "每月回贈上限$150", "備註": "海外及手機支付亦有5% (上限另計)" },
+            { "發卡機構": "信銀國際", "卡名": "Motion 信用卡 (虛擬版)", "消費種類": "餐飲/網購", "支付方式": "網上 / 實體", "簽帳地區": "本地", "指定商戶": "餐飲、網上簽帳", "回饋種類": "現金回贈", "回饋數值": "6%", "簽帳上限": "每月回贈上限$200 (即簽$3,636)", "備註": "回贈率高但上限較低，適合小額消費" },
+            { "發卡機構": "東亞銀行", "卡名": "BEA GOAL 信用卡", "消費種類": "網上/手機支付", "支付方式": "Apple Pay / Google Pay", "簽帳地區": "本地", "指定商戶": "娛樂、網上簽帳", "回饋種類": "現金回贈", "回饋數值": "4.4%", "簽帳上限": "需透過BEA Mall登記", "備註": "需配合「東亞日」優惠使用" },
+            { "發卡機構": "DBS", "卡名": "Live Fresh 信用卡", "消費種類": "自選類別", "支付方式": "網上交易", "簽帳地區": "本地/海外", "指定商戶": "自選一項：網上超市、網上餐飲、網上旅遊、網上娛樂等", "回饋種類": "DBS COMPASS Dollar", "回饋數值": "5%", "簽帳上限": "每月回贈上限$150", "備註": "類別可每月更改一次" },
+            { "發卡機構": "Mox Bank", "卡名": "Mox Credit", "消費種類": "網上/日常", "支付方式": "網上 / Apple Pay", "簽帳地區": "所有地區", "指定商戶": "超市、CashBack 商戶 (如 7-11, 萬寧, Uber)", "回饋種類": "現金回贈", "回饋數值": "3% (超市) / 2% (無上限)", "簽帳上限": "超市3%設上限，2%無上限 (需戶口結餘達標)", "備註": "需保持Mox戶口有HK$75,000存款才享2%無上限" },
+            { "發卡機構": "渣打銀行", "卡名": "Simply Cash Visa 卡", "消費種類": "所有消費", "支付方式": "任何方式", "簽帳地區": "本地", "指定商戶": "不限", "回饋種類": "現金回贈", "回饋數值": "1.5%", "簽帳上限": "無上限", "備註": "港幣簽帳最強公廁卡，外幣2%" },
+            { "發卡機構": "Citi", "卡名": "Cash Back 信用卡", "消費種類": "餐飲/酒店", "支付方式": "實體/網上", "簽帳地區": "本地/海外", "指定商戶": "本地食肆、酒店、外幣簽帳", "回饋種類": "現金回贈", "回饋數值": "2%", "簽帳上限": "無上限", "備註": "回贈自動入帳，無須登記，其他簽帳1%" },
+            { "發卡機構": "安信", "卡名": "EarnMORE 銀聯卡", "消費種類": "所有消費", "支付方式": "任何方式", "簽帳地區": "所有地區", "指定商戶": "不限", "回饋種類": "現金回贈", "回饋數值": "2%", "簽帳上限": "每年首$150,000簽帳享2%，其後1%", "備註": "門檻低，學生亦可申請，支援雲閃付" },
+            { "發卡機構": "渣打銀行", "卡名": "Smart 信用卡", "消費種類": "指定商戶", "支付方式": "實體/手機支付", "簽帳地區": "本地", "指定商戶": "百佳、759阿信屋、屈臣氏、麥當勞、HKTVmall、Klook", "回饋種類": "現金回贈", "回饋數值": "5%", "簽帳上限": "每年上限$3,000回贈 (即簽$60,000)", "備註": "免外幣手續費，日常超市必備" },
+            { "發卡機構": "DBS", "卡名": "Eminent Visa Signature", "消費種類": "餐飲/健身", "支付方式": "實體/網上", "簽帳地區": "本地", "指定商戶": "餐飲、健身中心、運動服飾、醫療服務", "回饋種類": "DBS COMPASS Dollar", "回饋數值": "5%", "簽帳上限": "每月回贈上限$300 (需單筆滿$300)", "備註": "需透過DBS Card+ App登記，每次簽帳需滿$300" },
+            { "發卡機構": "恒生銀行", "卡名": "enJoy 卡", "消費種類": "超市/餐飲", "支付方式": "實體/手機支付", "簽帳地區": "本地", "指定商戶": "惠康、萬寧、7-11、IKEA、必勝客、KFC", "回饋種類": "Yuu 積分", "回饋數值": "2% - 4%", "簽帳上限": "無上限", "備註": "綁定 Yuu App 儲分專用，特約商戶有折扣" },
+            { "發卡機構": "滙豐銀行", "卡名": "Visa Signature 卡", "消費種類": "自選類別", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "「最紅自主獎賞」類別 (賞滋味/賞世界/賞生活等)", "回饋種類": "「獎賞錢」(RC)", "回饋數值": "3.6%", "簽帳上限": "每年首$100,000", "備註": "需分配5X積分至同一類別才達3.6%" },
+            { "發卡機構": "安信", "卡名": "WeWa 銀聯卡", "消費種類": "娛樂/旅遊", "支付方式": "實體/手機支付", "簽帳地區": "本地/海外", "指定商戶": "旅遊、戲院、卡拉OK、主題公園", "回饋種類": "現金回贈", "回饋數值": "4%", "簽帳上限": "每年上限$2,000回贈", "備註": "適合年輕人娛樂消費" },
+            { "發卡機構": "滙豐銀行", "卡名": "EveryMile 信用卡", "消費種類": "旅遊/交通", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "指定交通、咖啡店、串流平台", "回饋種類": "里數 (RC)", "回饋數值": "HK$2/里", "簽帳上限": "無上限", "備註": "免費入Lounge 6次/年，里數兌換率極佳" },
+            { "發卡機構": "渣打銀行", "卡名": "國泰 Mastercard", "消費種類": "旅遊/餐飲", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "國泰航空、HK Express、餐飲、外幣", "回饋種類": "Asia Miles", "回饋數值": "HK$4/里", "簽帳上限": "無上限", "備註": "里數直接存入帳戶，無須手續費" },
+            { "發卡機構": "DBS", "卡名": "Black World Mastercard", "消費種類": "海外簽帳", "支付方式": "任何方式", "簽帳地區": "海外", "指定商戶": "所有外幣簽帳", "回饋種類": "DBS$", "回饋數值": "HK$4/里", "簽帳上限": "無上限", "備註": "積分無限期，兌換里數靈活" },
+            { "發卡機構": "美國運通", "卡名": "Explorer 信用卡", "消費種類": "旅遊/網購", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "指定航空、旅遊網、Amazon、Netflix", "回饋種類": "積分", "回饋數值": "HK$3/里", "簽帳上限": "無上限", "備註": "積分無限期，每年免費入Lounge 8次" },
+            { "發卡機構": "Citi", "卡名": "PremierMiles", "消費種類": "海外/旅遊", "支付方式": "任何方式", "簽帳地區": "海外", "指定商戶": "所有外幣簽帳", "回饋種類": "積分", "回饋數值": "HK$3/里", "簽帳上限": "無上限", "備註": "每年免費入Lounge 12次 (需簽帳要求)" },
+            { "發卡機構": "恒生銀行", "卡名": "Travel+ Visa Signature", "消費種類": "外幣/旅遊", "支付方式": "實體/網上", "簽帳地區": "海外 (日韓泰等)", "指定商戶": "日本、韓國、泰國、新加坡、澳洲外幣簽帳", "回饋種類": "+FUN Dollars", "回饋數值": "7%", "簽帳上限": "每月回贈上限$500", "備註": "外幣神卡，需登記" },
+            { "發卡機構": "東亞銀行", "卡名": "World Mastercard", "消費種類": "餐飲/海外", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "本地食肆、海外簽帳", "回饋種類": "積分", "回饋數值": "HK$5/里", "簽帳上限": "無上限", "備註": "飛行里數兌換免手續費" },
+            { "發卡機構": "中銀香港", "卡名": "Cheers Visa Signature", "消費種類": "餐飲/旅遊", "支付方式": "任何方式", "簽帳地區": "本地/海外", "指定商戶": "餐飲、外幣簽帳", "回饋種類": "積分", "回饋數值": "HK$1.5/里", "簽帳上限": "上限視乎級別", "備註": "需持有中銀理財戶口才享最佳兌換率" },
+            { "發卡機構": "富邦銀行", "卡名": "富邦 Titanium 卡", "消費種類": "外幣", "支付方式": "實體/網上", "簽帳地區": "台灣/日本/韓國", "指定商戶": "台日韓泰外幣簽帳", "回饋種類": "積分", "回饋數值": "4% (約HK$1.5/里)", "簽帳上限": "���有積分上限", "備註": "台灣簽帳首選" },
+            { "發卡機構": "AEON", "卡名": "Card JAL", "消費種類": "日本旅遊", "支付方式": "實體", "簽帳地區": "日本", "指定商戶": "日本航空、日本海外簽帳", "回饋種類": "里數", "回饋數值": "HK$8/里", "簽帳上限": "無上限", "備註": "儲 JAL (日航) 里數專用" },
+            { "發卡機構": "中銀香港", "卡名": "崇光 (SOGO) Visa 卡", "消費種類": "百貨購物", "支付方式": "N/A", "簽帳地區": "本地", "指定商戶": "SOGO 崇光百貨", "回饋種類": "折扣", "回饋數值": "5% - 10% 折扣", "簽帳上限": "N/A", "備註": "SOGO 感謝祭必備，手機支付享額外回贈" },
+            { "發卡機構": "中銀香港", "卡名": "大灣區一卡通", "消費種類": "內地消費", "支付方式": "N/A", "簽帳地區": "內地", "指定商戶": "內地交通、電子支付", "回饋種類": "現金回贈", "回饋數值": "4% 回贈", "簽帳上限": "N/A", "備註": "支援內地交通互聯互通，免手續費" },
+            { "發卡機構": "中銀香港", "卡名": "i-card", "消費種類": "網購/手機", "支付方式": "網上及手機支付", "簽帳地區": "本地", "指定商戶": "網上及手機支付", "回饋種類": "積分", "回饋數值": "10X 積分 (4%)", "簽帳上限": "每月上限較低 (約HK$1,111)", "備註": "積分不過期" },
+            { "發卡機構": "Citi", "卡名": "Rewards 信用卡", "消費種類": "超市/百貨", "支付方式": "手機支付", "簽帳地區": "本地", "指定商戶": "透過手機支付於超市/百貨", "回饋種類": "積分", "回饋數值": "5X 積分 (2%)", "簽帳上限": "N/A", "備註": "積分不過期，適合師奶買餸" },
+            { "發卡機構": "Citi", "卡名": "八達通白金卡", "消費種類": "交通", "支付方式": "實體", "簽帳地區": "本地", "指定商戶": "九巴、龍運、隧道費", "回饋種類": "現金回贈", "回饋數值": "15% 回贈", "簽帳上限": "需每月簽帳滿指定金額", "備註": "需每月簽帳滿指定金額才享交通回贈" },
+            { "發卡機構": "DBS", "卡名": "COMPASS Visa", "消費種類": "超市", "支付方式": "實體", "簽帳地區": "本地", "指定商戶": "百佳、屈臣氏", "回饋種類": "折扣/積分", "回饋數值": "1% + 指定日92折", "簽帳上限": "N/A", "備註": "師奶神卡，每月2, 12, 22號百佳92折" },
+            { "發卡機構": "滙豐銀行", "卡名": "Pulse 銀聯雙幣鑽石卡", "消費種類": "內地/本地", "支付方式": "實體/手機支付", "簽帳地區": "內地及澳門", "指定商戶": "內地及澳門簽帳", "回饋種類": "「獎賞錢」", "回饋數值": "4.4% (需登記)", "簽帳上限": "設有上限", "備註": "內地消費首選，免手續費" },
+            { "發卡機構": "東亞銀行", "卡名": "i-Titanium 卡", "消費種類": "網購", "支付方式": "網上交易", "簽帳地區": "本地", "指定商戶": "網上購物", "回饋種類": "現金回贈", "回饋數值": "3% - 4%", "簽帳上限": "需每月簽帳滿額", "備註": "需每月簽帳滿額" },
+            { "發卡機構": "Sim", "卡名": "Sim Credit Card", "消費種類": "網購/便利店", "支付方式": "網上/實體", "簽帳地區": "本地", "指定商戶": "網購、便利店", "回饋種類": "現金回贈", "回饋數值": "8% (需單筆滿$500)", "簽帳上限": "設有上限", "備註": "新晉發卡機構，回贈率高但條款較多" },
+            { "發卡機構": "交通銀行", "卡名": "Go-Goal 信用卡", "消費種類": "網購", "支付方式": "網上/手機支付", "簽帳地區": "本地", "指定商戶": "網上/手機支付", "回饋種類": "現金回贈", "回饋數值": "5%", "簽帳上限": "需登記", "備註": "需登記推廣計劃" }
+        ];
 
-            if (response.ok) {
-                resultArea.innerText = data.reply;
-                resultArea.style.display = 'block';
-            } else {
-                resultArea.innerText = '錯誤: ' + (data.error || '未知錯誤');
-                resultArea.style.display = 'block';
-                resultArea.style.borderColor = 'red';
+        // ===== API INTEGRATION =====
+        // Backend API Configuration
+        const API_BASE_URL = 'https://gemini-backend-3ej4.onrender.com';
+
+        // Fetch cards from backend
+        async function loadCardsFromAPI() {
+            try {
+                isLoading = true;
+                showLoadingState();
+
+                const response = await fetch(`${API_BASE_URL}/api/cards`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`後端回應錯誤: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                cardsData = data;
+                isLoading = false;
+
+                // Show data source indicator
+                const dataSourceEl = document.getElementById('dataSource');
+                dataSourceEl.textContent = '🗄️ 後端資料庫';
+                dataSourceEl.classList.remove('hidden');
+                dataSourceEl.classList.add('bg-green-100', 'text-green-700');
+
+                return data;
+            } catch (error) {
+                isLoading = false;
+                console.error('載入信用卡資料失敗:', error);
+                throw error;
+            }
+        }
+
+        function showLoadingState() {
+            const container = document.getElementById('cardList');
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                    <p class="text-gray-500">正在從資料庫載入信用卡資料...</p>
+                </div>
+            `;
+        }
+
+        // 2. Mapping Logic (Keywords)
+        const keywords = {
+            dining: ['餐飲', '食肆', '所有消費', 'Dining', '必勝客', 'KFC', '麥當勞'],
+            online: ['網上', '網購', '所有消費', 'Online', 'Amazon', 'Netflix'],
+            supermarket: ['超市', '百貨', '所有消費', '惠康', '百佳', '萬寧', '屈臣氏', '7-11', '759', 'SOGO', 'IKEA'],
+            travel: ['旅遊', '外幣', '海外', '酒店', '所有消費', '航空', '里數', 'Lounge', '國泰'],
+            transport: ['交通', '車費', '隧道', '九巴', '所有消費', '入油'],
+            entertainment: ['娛樂', '電影', '戲院', 'Netflix', 'Disney+', '所有消費'],
+            mobile: ['手機支付', 'Apple Pay', 'Google Pay', '所有消費']
+        };
+
+        const regionKeywords = {
+            local: ['本地', '所有地區', '全球'],
+            overseas: ['海外', '外幣', '所有地區', '全球'],
+            china: ['內地', '大灣區', '所有地區', '全球'],
+            japan: ['日本', '所有地區', '全球', '外幣']
+        };
+
+        // 3. Filter Function
+        function filterCards() {
+            try {
+                const cat = document.getElementById('categorySelect').value;
+                const region = document.getElementById('regionSelect').value;
+                
+                const results = cardsData.filter(card => {
+                    // 1. Region Check
+                    let regionMatch = false;
+                    const cardRegion = (card['簽帳地區'] || '').toLowerCase();
+                    const cardMerchants = (card['指定商戶'] || '').toLowerCase();
+                    
+                    if (region === 'japan') {
+                        if (cardRegion.includes('日本') || cardMerchants.includes('日本') || cardRegion.includes('全球') || cardRegion.includes('所有地區')) regionMatch = true;
+                        if (cardRegion.includes('本地') && !cardRegion.includes('所有')) regionMatch = false;
+                    } else {
+                        const targetRegions = regionKeywords[region];
+                        regionMatch = targetRegions.some(k => cardRegion.includes(k));
+                    }
+
+                    // 2. Category Check
+                    let catMatch = false;
+                    if (cat === 'all') {
+                        catMatch = true;
+                    } else {
+                        const targetKeywords = keywords[cat];
+                        const combinedText = (card['消費種類'] + card['指定商戶'] + card['卡名'] + card['備註']).toLowerCase();
+                        catMatch = targetKeywords.some(k => combinedText.includes(k.toLowerCase()));
+                    }
+
+                    return regionMatch && catMatch;
+                });
+
+                results.sort((a, b) => {
+                    const getRate = (str) => {
+                        const match = str.match(/(\d+(\.\d+)?)%/);
+                        return match ? parseFloat(match[1]) : 0;
+                    };
+                    const rateA = getRate(a['回饋數值']);
+                    const rateB = getRate(b['回饋數值']);
+                    return rateB - rateA;
+                });
+
+                renderCards(results);
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        // 4. Render Function
+        function renderCards(cards) {
+            const container = document.getElementById('cardList');
+            const countLabel = document.getElementById('resultCount');
+            container.innerHTML = '';
+            countLabel.textContent = `共 ${cards.length} 張卡`;
+
+            if (cards.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">找不到符合條件的信用卡 🥲</div>';
+                return;
             }
 
-        } catch (error) {
-            console.error('Error:', error);
-            resultArea.innerText = '連線失敗，請檢查網路或 Render 狀態。';
-            resultArea.style.display = 'block';
-            resultArea.style.borderColor = 'red';
-        } finally {
-            // 恢復按鈕狀態
-            btn.disabled = false;
-            loading.style.display = 'none';
-        }
-    }
-</script>
+            cards.forEach(card => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-item flex flex-col gap-2';
+                
+                let rateDisplay = card['回饋數值'];
+                if(rateDisplay.includes('/里')) {
+                    rateDisplay = `<span class="text-blue-600 text-lg font-bold">${rateDisplay}</span>`;
+                } else {
+                    rateDisplay = `<span class="highlight-rate">${rateDisplay}</span>`;
+                }
 
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="tag tag-bank">${card['發卡機構']}</span>
+                            <h3 class="font-bold text-gray-800 text-lg leading-tight">${card['卡名']}</h3>
+                        </div>
+                        <div class="text-right min-w-[80px]">
+                            ${rateDisplay}
+                            <div class="text-xs text-gray-400">${card['回饋種類']}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-sm text-gray-600 mt-1">
+                        <span class="font-semibold text-gray-500">🎯 指定商戶/類別:</span> ${card['指定商戶'] === '不限' ? '所有消費' : card['指定商戶']}
+                    </div>
+
+                    <div class="bg-gray-50 p-2 rounded text-xs text-gray-500 mt-2">
+                        <p>⚠️ <strong>上限:</strong> ${card['簽帳上限']}</p>
+                        ${card['備註'] ? `<p class="mt-1 text-blue-600">💡 ${card['備註']}</p>` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function showError(msg) {
+            document.getElementById('errorDisplay').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = msg;
+            document.getElementById('cardList').innerHTML = '';
+        }
+
+        // Initial Load
+        window.onload = async () => {
+            try {
+                // Load data from backend API
+                await loadCardsFromAPI();
+                // Then filter and display
+                filterCards();
+            } catch (e) {
+                console.error("無法連接到後端資料庫:", e);
+
+                // Show fallback data source indicator
+                const dataSourceEl = document.getElementById('dataSource');
+                dataSourceEl.textContent = '💾 離線模式';
+                dataSourceEl.classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                dataSourceEl.classList.add('bg-yellow-100', 'text-yellow-700');
+
+                // Fallback: use existing hardcoded data if API fails
+                filterCards();
+            }
+        };
+
+    </script>
 </body>
 </html>
